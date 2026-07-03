@@ -8,11 +8,30 @@ import math
 from datetime import datetime, timedelta
 import platform
 import matplotlib.font_manager as fm
+import os
 
 # ============================================================
-# 1. 修复 matplotlib 中文显示（适配 Streamlit Cloud）
+# 1. 修复 matplotlib 中文显示（优先使用项目内字体）
 # ============================================================
 def set_chinese_font():
+    """设置中文字体：优先使用 fonts/ 目录下的字体文件，否则回退到系统查找"""
+    # 获取当前文件所在目录
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    font_dir = os.path.join(base_dir, 'fonts')
+    font_path = os.path.join(font_dir, 'NotoSansCJK-Regular.ttf')  # 若字体文件名不同，请修改
+
+    if os.path.exists(font_path):
+        try:
+            # 将字体添加到 Matplotlib 字体管理器
+            fm.fontManager.addfont(font_path)
+            prop = fm.FontProperties(fname=font_path)
+            plt.rcParams['font.sans-serif'] = [prop.get_name()]
+            plt.rcParams['axes.unicode_minus'] = False
+            return
+        except Exception:
+            pass  # 若加载失败，继续尝试系统字体
+
+    # 回退：尝试从系统查找中文字体（适用于 Linux / Windows / macOS）
     if platform.system() == 'Linux':
         font_list = fm.findSystemFonts(fontpaths=None, fontext='ttf')
         chinese_keywords = ['cjk', 'hei', 'song', 'ming', 'noto', 'sc', 'cn', 'chinese']
@@ -23,12 +42,13 @@ def set_chinese_font():
             plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
     else:
         plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+
     plt.rcParams['axes.unicode_minus'] = False
 
 set_chinese_font()
 
 # ============================================================
-# 2. 核素参数库（扩展了更多核素）
+# 2. 核素参数库
 # ============================================================
 NUCLIDE_DATA = {
     "F-18": {
@@ -67,7 +87,6 @@ NUCLIDE_DATA = {
         "gamma_const": 0.0595,
         "tvl": {'Lead': 10.0, 'Concrete': 110, 'Steel': 40}
     },
-    # 可继续添加更多核素
 }
 
 DEFAULT_NUCLIDE = "F-18"
@@ -76,7 +95,7 @@ DEFAULT_DOSE_RATE_LIMIT = 2.5
 TVL_KEYS = ['Lead', 'Concrete', 'Steel']
 
 # ============================================================
-# 3. 核心计算函数（完全来自桌面版）
+# 3. 核心计算函数（不变）
 # ============================================================
 def decay_correction(activity_ref, ref_time_str, current_time_str, nuclide_key):
     try:
@@ -134,8 +153,18 @@ def compute_unshielded_dose_rate(activity_mbq, distance_m, correction_factor, ga
 # ============================================================
 st.set_page_config(page_title="核医学屏蔽计算器 Web", layout="wide")
 st.title("☢️ Nuclear Medicine Shielding Calculator")
-st.markdown("**版本 V2.3 Web** | 制作者: Fang KeMing & DeepSeek | 2026-07-03")
+st.markdown("**版本 V1.3** | 制作者: Fang KeMing & DeepSeek | 2026-07-04")
 st.warning("免责声明：本软件为免费软件，作者对使用结果不承担任何责任，请自行承担风险。")
+
+# 初始化 session_state 默认值（防止 KeyError）
+if 's_cur_act' not in st.session_state:
+    st.session_state['s_cur_act'] = 370.0
+if 's_cur_pct' not in st.session_state:
+    st.session_state['s_cur_pct'] = 0.0
+if 'r_cur_act1' not in st.session_state:
+    st.session_state['r_cur_act1'] = 370.0
+if 'r_cur_act2' not in st.session_state:
+    st.session_state['r_cur_act2'] = 185.0
 
 # ============================================================
 # 5. 导航标签（Simple / Room）
@@ -170,20 +199,19 @@ with tab_simple:
                         st.session_state['s_cur_pct'] = pct
                     else:
                         st.session_state['s_cur_act'] = ref_act_s
+                        st.session_state['s_cur_pct'] = 0.0
                 except Exception as e:
                     st.error(f"衰变修正错误: {e}")
-        if 's_cur_act' in st.session_state:
-            st.write(f"当前活度: **{st.session_state['s_cur_act']:.2f} MBq** " + 
-                     (f"({st.session_state['s_cur_pct']:.1f}%)" if decay_enabled_s else "(未修正)"))
-        else:
-            st.session_state['s_cur_act'] = ref_act_s
+        # 显示当前活度（安全访问）
+        pct_display = st.session_state.get('s_cur_pct', 0.0)
+        st.write(f"当前活度: **{st.session_state['s_cur_act']:.2f} MBq** " +
+                 (f"({pct_display:.1f}%)" if decay_enabled_s else "(未修正)"))
 
         st.subheader("几何与材料")
         distance_s = st.number_input("距离 (m)", value=3.0, min_value=0.1, step=0.1, key="s_dist")
         abs_s = st.slider("自吸收因子", 0.0, 1.0, DEFAULT_SELF_ABS, 0.01, key="s_abs")
         material_s = st.selectbox("屏蔽材料", TVL_KEYS, key="s_mat")
         mode_s = st.selectbox("计算模式", ["Instantaneous Dose Rate", "Weekly Dose"], key="s_mode")
-        # 瞬时参数
         if mode_s == "Instantaneous Dose Rate":
             dose_limit_s = st.number_input("目标剂量率 (μSv/h)", value=DEFAULT_DOSE_RATE_LIMIT, step=0.1, key="s_dose_limit")
             use_ct_s = st.checkbox("考虑CT贡献", value=False, key="s_ct")
@@ -196,7 +224,9 @@ with tab_simple:
         calc_btn_s = st.button("计算并绘图", key="s_calc")
 
     # 主区域显示结果
+    # 若点击计算或首次加载（通过标记）
     if calc_btn_s or 's_calc_done' not in st.session_state:
+        st.session_state['s_calc_done'] = True
         # 获取当前活度
         try:
             if decay_enabled_s:
@@ -296,7 +326,7 @@ with tab_simple:
                 ax2.text(bar.get_x()+bar.get_width()/2, val+0.5, f"{val:.1f}", ha='center')
             st.pyplot(fig2)
 
-        # 显示公式（纯文本）
+        # 显示公式
         with st.expander("公式说明"):
             st.text("【瞬时剂量率】\nd = TVL × log10( D_unshielded / D_target )\nD_unshielded = ( A × Γ × f ) / r²\n\n【周剂量】\nd = TVL × log10( D_week_unsh / D_week_limit )\nD_week_unsh = Γ × f × (MBq·h) / r² × occ")
 
@@ -337,12 +367,8 @@ with tab_room:
                     st.session_state['r_cur_act2'] = ref_act2_r
             except Exception as e:
                 st.error(f"衰变修正错误: {e}")
-        if 'r_cur_act1' in st.session_state:
-            st.write(f"源1当前活度: **{st.session_state['r_cur_act1']:.2f} MBq**")
-            st.write(f"源2当前活度: **{st.session_state['r_cur_act2']:.2f} MBq**")
-        else:
-            st.session_state['r_cur_act1'] = ref_act1_r
-            st.session_state['r_cur_act2'] = ref_act2_r
+        st.write(f"源1当前活度: **{st.session_state['r_cur_act1']:.2f} MBq**")
+        st.write(f"源2当前活度: **{st.session_state['r_cur_act2']:.2f} MBq**")
 
         st.subheader("房间几何")
         L = st.number_input("房间长度 X (m)", value=6.0, step=0.5, key="r_len")
@@ -389,6 +415,7 @@ with tab_room:
 
     # 主区域显示结果
     if calc_btn_r or 'r_calc_done' not in st.session_state:
+        st.session_state['r_calc_done'] = True
         # 获取当前活度
         try:
             if decay_enabled_r:
@@ -421,7 +448,7 @@ with tab_room:
         if mode_r == "Weekly Dose":
             st.warning("双源模式下推荐使用瞬时剂量率模式，将自动切换。")
             mode_r = "Instantaneous Dose Rate"
-        dose_limit = dose_limit_r if mode_r == "Instantaneous Dose Rate" else 20  # 备用
+        dose_limit = dose_limit_r if mode_r == "Instantaneous Dose Rate" else 20
         use_ct = use_ct_r if mode_r == "Instantaneous Dose Rate" else False
         ct_dose = ct_dose_r if use_ct else 0.0
 
