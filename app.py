@@ -9,6 +9,7 @@ Streamlit 版本，适配手机与桌面
 """
 
 import streamlit as st
+#st.set_option('deprecation.showPyplotGlobalUse', False)
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import numpy as np
