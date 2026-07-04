@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -322,6 +323,17 @@ def generate_room_report(data):
     </html>
     """
     return html
+
+# 生成数据
+df = pd.DataFrame({"时间": [0, 10, 20], "活度": [100, 50, 25]})
+csv = df.to_csv(index=False)
+
+st.download_button(
+    label="📥 下载报告 (CSV)",
+    data=csv,
+    file_name="report.csv",
+    mime="text/csv",
+)
 
 # ============================================================
 # 5. Streamlit 页面设置
