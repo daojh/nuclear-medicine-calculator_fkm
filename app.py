@@ -1,9 +1,7 @@
-import pandas as pd
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 import math
 from datetime import datetime, timedelta
@@ -51,44 +49,128 @@ NUCLIDE_DATA = {
         "half_life_min": 109.8,
         "decay_constant": 0.00631,
         "gamma_const": 0.143,
-        "tvl": {'Lead': 16.6, 'Concrete': 176, 'Steel': 65}
+        "tvl": {
+            'Lead': 16.6, 'Concrete': 176, 'Steel': 65,
+            'Tungsten': 11.0, 'Lead Glass': 40.0,
+            'Barium Concrete': 110, 'Depleted Uranium': 10.0,
+        }
     },
     "Ga-68": {
         "half_life_min": 67.7,
         "decay_constant": 0.01024,
         "gamma_const": 0.143,
-        "tvl": {'Lead': 16.6, 'Concrete': 176, 'Steel': 65}
+        "tvl": {
+            'Lead': 16.6, 'Concrete': 176, 'Steel': 65,
+            'Tungsten': 11.0, 'Lead Glass': 40.0,
+            'Barium Concrete': 110, 'Depleted Uranium': 10.0,
+        }
     },
     "C-11": {
         "half_life_min": 20.4,
         "decay_constant": 0.0340,
         "gamma_const": 0.143,
-        "tvl": {'Lead': 16.6, 'Concrete': 176, 'Steel': 65}
+        "tvl": {
+            'Lead': 16.6, 'Concrete': 176, 'Steel': 65,
+            'Tungsten': 11.0, 'Lead Glass': 40.0,
+            'Barium Concrete': 110, 'Depleted Uranium': 10.0,
+        }
     },
     "N-13": {
         "half_life_min": 9.97,
         "decay_constant": 0.0695,
         "gamma_const": 0.143,
-        "tvl": {'Lead': 16.6, 'Concrete': 176, 'Steel': 65}
+        "tvl": {
+            'Lead': 16.6, 'Concrete': 176, 'Steel': 65,
+            'Tungsten': 11.0, 'Lead Glass': 40.0,
+            'Barium Concrete': 110, 'Depleted Uranium': 10.0,
+        }
     },
     "O-15": {
         "half_life_min": 2.04,
         "decay_constant": 0.340,
         "gamma_const": 0.143,
-        "tvl": {'Lead': 16.6, 'Concrete': 176, 'Steel': 65}
+        "tvl": {
+            'Lead': 16.6, 'Concrete': 176, 'Steel': 65,
+            'Tungsten': 11.0, 'Lead Glass': 40.0,
+            'Barium Concrete': 110, 'Depleted Uranium': 10.0,
+        }
     },
     "I-131": {
         "half_life_min": 11520.0,
         "decay_constant": 0.0000602,
         "gamma_const": 0.0595,
-        "tvl": {'Lead': 10.0, 'Concrete': 110, 'Steel': 40}
+        "tvl": {
+            'Lead': 10.0, 'Concrete': 110, 'Steel': 40,
+            'Tungsten': 7.0, 'Lead Glass': 25.0,
+            'Barium Concrete': 70, 'Depleted Uranium': 6.5,
+        }
+    },
+    "Tc-99m": {
+        "half_life_min": 360.0,
+        "decay_constant": 0.001925,
+        "gamma_const": 0.030,
+        "tvl": {
+            'Lead': 0.8, 'Concrete': 10, 'Steel': 4,
+            'Tungsten': 0.5, 'Lead Glass': 2.0,
+            'Barium Concrete': 6, 'Depleted Uranium': 0.4,
+        }
+    },
+    "Lu-177": {
+        "half_life_min": 9619.2,
+        "decay_constant": 0.0000721,
+        "gamma_const": 0.013,
+        "tvl": {
+            'Lead': 0.2, 'Concrete': 3, 'Steel': 1,
+            'Tungsten': 0.12, 'Lead Glass': 0.5,
+            'Barium Concrete': 1.8, 'Depleted Uranium': 0.1,
+        }
+    },
+    "I-123": {
+        "half_life_min": 762.0,
+        "decay_constant": 0.000910,
+        "gamma_const": 0.050,
+        "tvl": {
+            'Lead': 2.5, 'Concrete': 30, 'Steel': 12,
+            'Tungsten': 1.8, 'Lead Glass': 6.0,
+            'Barium Concrete': 20, 'Depleted Uranium': 1.5,
+        }
+    },
+    "In-111": {
+        "half_life_min": 4027.2,
+        "decay_constant": 0.000172,
+        "gamma_const": 0.040,
+        "tvl": {
+            'Lead': 8.0, 'Concrete': 80, 'Steel': 30,
+            'Tungsten': 5.5, 'Lead Glass': 20,
+            'Barium Concrete': 50, 'Depleted Uranium': 5.0,
+        }
+    },
+    "Tl-201": {
+        "half_life_min": 4406.4,
+        "decay_constant": 0.000157,
+        "gamma_const": 0.022,
+        "tvl": {
+            'Lead': 6.0, 'Concrete': 60, 'Steel': 22,
+            'Tungsten': 4.0, 'Lead Glass': 15,
+            'Barium Concrete': 38, 'Depleted Uranium': 3.5,
+        }
+    },
+    "Sr-89": {
+        "half_life_min": 6067.2,
+        "decay_constant": 0.000114,
+        "gamma_const": 0.0012,
+        "tvl": {
+            'Lead': 0.5, 'Concrete': 5, 'Steel': 2,
+            'Tungsten': 0.3, 'Lead Glass': 1.2,
+            'Barium Concrete': 3, 'Depleted Uranium': 0.25,
+        }
     },
 }
 
 DEFAULT_NUCLIDE = "F-18"
 DEFAULT_SELF_ABS = 0.64
 DEFAULT_DOSE_RATE_LIMIT = 2.5
-TVL_KEYS = ['Lead', 'Concrete', 'Steel']
+TVL_KEYS = ['Lead', 'Concrete', 'Steel', 'Tungsten', 'Lead Glass', 'Barium Concrete', 'Depleted Uranium']
 
 # ============================================================
 # 3. 核心计算函数
@@ -146,7 +228,6 @@ def compute_unshielded_dose_rate(activity_mbq, distance_m, correction_factor, ga
 # 4. 报告生成函数
 # ============================================================
 def fig_to_base64(fig):
-    """将 matplotlib Figure 转换为 Base64 编码的图片"""
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
     buf.seek(0)
@@ -155,9 +236,7 @@ def fig_to_base64(fig):
     return img_b64
 
 def generate_simple_report(data):
-    """生成 Simple Mode 的 HTML 报告"""
     img_b64 = fig_to_base64(data['fig'])
-    
     extra_params = ""
     if data['calc_mode'] == "Instantaneous Dose Rate":
         extra_params += f"""
@@ -173,7 +252,6 @@ def generate_simple_report(data):
             <tr><td>占用因子</td><td>{data['occupancy']:.2f}</td></tr>
             <tr><td>周剂量限值</td><td>{data['week_limit']:.1f} μSv</td></tr>
         """
-    
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -199,7 +277,6 @@ def generate_simple_report(data):
         <h1>☢️ 核医学屏蔽计算报告</h1>
         <p><strong>模式：</strong>点源屏蔽计算</p>
         <p><strong>生成时间：</strong>{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
-        
         <h2>📋 计算参数</h2>
         <table>
             <tr><td><strong>核素</strong></td><td>{data['nuclide']}</td></tr>
@@ -210,19 +287,14 @@ def generate_simple_report(data):
             <tr><td><strong>计算模式</strong></td><td>{data['calc_mode']}</td></tr>
             {extra_params}
         </table>
-        
         <h2>📊 计算结果</h2>
         <table>
             <tr><th>参数</th><th>数值</th></tr>
             <tr><td><strong>所需屏蔽厚度</strong></td><td class="result">{data['thickness']:.2f} mm</td></tr>
         </table>
-        
         <h2>📈 图示</h2>
         <img src="data:image/png;base64,{img_b64}" alt="屏蔽厚度随距离变化曲线">
-        
-        <div class="footer">
-            核医学屏蔽计算器 V2.0 | 制作者: Fang KeMing & DeepSeek | 2026-07-04
-        </div>
+        <div class="footer">核医学屏蔽计算器 V2.1 | 制作者: Fang KeMing & DeepSeek | 2026-07-04</div>
     </div>
     </body>
     </html>
@@ -230,13 +302,10 @@ def generate_simple_report(data):
     return html
 
 def generate_room_report(data):
-    """生成 Room Layout Mode 的 HTML 报告"""
     img_b64 = fig_to_base64(data['fig'])
-    
     src_rows = ""
     for i, (act, (x, y, z)) in enumerate(data['sources'], 1):
         src_rows += f"<tr><td>源{i}</td><td>({x:.2f}, {y:.2f}, {z:.2f})</td><td>{act:.2f} MBq</td></tr>"
-    
     point_rows = ""
     for name, (px, py, pz, dists, total_dose, thick) in data['result_points'].items():
         dist_str = " | ".join([f"{d:.2f}" for d in dists])
@@ -249,13 +318,11 @@ def generate_room_report(data):
                 <td class="result">{thick:.2f}</td>
             </tr>
         """
-    
     door_rows = ""
     for name, side, pos, width in data['doors']:
         door_rows += f"<tr><td>{name}</td><td>{side}</td><td>{pos:.2f} m</td><td>{width:.2f} m</td></tr>"
     win_side, win_pos, win_w = data['window']
     door_rows += f"<tr><td>窗户</td><td>{win_side}</td><td>{win_pos:.2f} m</td><td>{win_w:.2f} m</td></tr>"
-    
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -281,7 +348,6 @@ def generate_room_report(data):
         <h1>☢️ 核医学屏蔽计算报告 - 房间布局</h1>
         <p><strong>模式：</strong>房间布局屏蔽计算（双源）</p>
         <p><strong>生成时间：</strong>{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
-        
         <h2>📋 计算参数</h2>
         <table>
             <tr><td><strong>核素</strong></td><td>{data['nuclide']}</td></tr>
@@ -293,54 +359,36 @@ def generate_room_report(data):
             <tr><td><strong>CT贡献</strong></td><td>{'是' if data['ct_used'] else '否'}</td></tr>
             <tr><td><strong>衰变修正</strong></td><td>{'启用' if data['decay_enabled'] else '禁用'}</td></tr>
         </table>
-        
         <h2>🔴 放射源信息</h2>
         <table>
             <tr><th>源</th><th>坐标 (X, Y, Z)</th><th>当前活度</th></tr>
             {src_rows}
         </table>
-        
         <h2>🚪 门与窗</h2>
         <table>
             <tr><th>名称</th><th>侧边</th><th>位置</th><th>宽度</th></tr>
             {door_rows}
         </table>
-        
         <h2>📊 各关注点计算结果</h2>
         <table>
             <tr><th>点位</th><th>坐标</th><th>到源1/源2距离 (m)</th><th>总剂量率 (μSv/h)</th><th>所需厚度 (mm)</th></tr>
             {point_rows}
         </table>
-        
         <h2>📐 房间布局图</h2>
         <img src="data:image/png;base64,{img_b64}" alt="房间布局图 (俯视图 + 3D视图)">
-        
-        <div class="footer">
-            核医学屏蔽计算器 V2.0 | 制作者: Fang KeMing & DeepSeek | 2026-07-04
-        </div>
+        <div class="footer">核医学屏蔽计算器 V2.1 | 制作者: Fang KeMing & DeepSeek | 2026-07-04</div>
     </div>
     </body>
     </html>
     """
     return html
 
-# 生成数据
-df = pd.DataFrame({"时间": [0, 10, 20], "活度": [100, 50, 25]})
-csv = df.to_csv(index=False)
-
-st.download_button(
-    label="📥 下载报告 (CSV)",
-    data=csv,
-    file_name="report.csv",
-    mime="text/csv",
-)
-
 # ============================================================
 # 5. Streamlit 页面设置
 # ============================================================
 st.set_page_config(page_title="核医学屏蔽计算器 Web", layout="wide")
 st.title("☢️ Nuclear Medicine Shielding Calculator")
-st.markdown("**版本 V2.0** | 制作者: Fang KeMing & DeepSeek | 2026-07-04")
+st.markdown("**版本 V2.1** | 制作者: Fang KeMing & DeepSeek | 2026-07-04")
 st.warning("免责声明：本软件为免费软件，作者对使用结果不承担任何责任，请自行承担风险。")
 
 # 初始化 session_state
@@ -356,11 +404,17 @@ if 's_report_data' not in st.session_state:
     st.session_state['s_report_data'] = None
 if 'r_report_data' not in st.session_state:
     st.session_state['r_report_data'] = None
+if 's_last_result' not in st.session_state:
+    st.session_state['s_last_result'] = None
+if 's_calc_done' not in st.session_state:
+    st.session_state['s_calc_done'] = False
+if 'r_calc_done' not in st.session_state:
+    st.session_state['r_calc_done'] = False
 
 # ============================================================
 # 6. 导航标签
 # ============================================================
-tab_simple, tab_room = st.tabs([" Simple Point Source", " Room Layout (双源)"])
+tab_simple, tab_room = st.tabs(["🔵 Simple Point Source", "🟢 Room Layout (双源)"])
 
 # ============================================================
 # 7. Simple Mode
@@ -416,7 +470,8 @@ with tab_simple:
         log_scale_s = st.checkbox("Y轴对数", value=False, key="s_log")
         calc_btn_s = st.button("计算并绘图", key="s_calc")
     
-    if calc_btn_s or 's_calc_done' not in st.session_state:
+    # ---- 计算主逻辑 ----
+    if calc_btn_s:
         st.session_state['s_calc_done'] = True
         try:
             if decay_enabled_s:
@@ -446,19 +501,41 @@ with tab_simple:
                 thickness = calc_thickness_instant(A_cur, dist, mat, dose_limit_s, abs_factor,
                                                    use_ct=use_ct_s, ct_dose_rate=ct_dose_s if use_ct_s else 0.0,
                                                    gamma_const=gamma_const, tvl_dict=tvl_dict)
-                st.metric("所需屏蔽厚度", f"{thickness:.2f} mm")
                 unshielded = compute_unshielded_dose_rate(A_cur, dist, abs_factor, gamma_const)
                 if use_ct_s:
                     unshielded += ct_dose_s
-                st.metric("未屏蔽剂量率", f"{unshielded:.3f} μSv/h")
             else:
                 thickness = calc_thickness_weekly(A_cur, dist, mat, workload_s, occ_s, week_limit_s,
                                                   abs_factor, gamma_const=gamma_const, tvl_dict=tvl_dict)
-                st.metric("所需屏蔽厚度", f"{thickness:.2f} mm")
+                unshielded = None
         except Exception as e:
             st.error(f"计算错误: {e}")
             st.stop()
         
+        # 保存到 session_state（用于后续材料比较和报告）
+        st.session_state['s_last_result'] = {
+            'nuclide': nuclide_s,
+            'activity': A_cur,
+            'distance': dist,
+            'abs_factor': abs_factor,
+            'mode': mode_s,
+            'dose_limit': dose_limit_s if mode_s == "Instantaneous Dose Rate" else None,
+            'ct_used': use_ct_s if mode_s == "Instantaneous Dose Rate" else False,
+            'ct_dose': ct_dose_s if mode_s == "Instantaneous Dose Rate" and use_ct_s else 0.0,
+            'workload': workload_s if mode_s == "Weekly Dose" else None,
+            'occupancy': occ_s if mode_s == "Weekly Dose" else None,
+            'week_limit': week_limit_s if mode_s == "Weekly Dose" else None,
+            'thickness': thickness,
+            'unshielded': unshielded,
+        }
+        
+        # 显示结果
+        col1, col2 = st.columns(2)
+        col1.metric("所需屏蔽厚度", f"{thickness:.2f} mm")
+        if unshielded is not None:
+            col2.metric("未屏蔽剂量率", f"{unshielded:.3f} μSv/h")
+        
+        # ---- 绘图：厚度 vs 距离 ----
         st.subheader("屏蔽厚度随距离变化")
         x_max = max(2 * dist, 1.0)
         dist_range = np.linspace(0.01, x_max, 100)
@@ -490,7 +567,7 @@ with tab_simple:
         ax.set_title(f"厚度 vs 距离 ({mat}, {nuclide_s})")
         st.pyplot(fig)
         
-        # --- 保存报告数据到 session_state ---
+        # 保存报告数据（包含 fig）
         report_data = {
             'nuclide': nuclide_s,
             'activity': A_cur,
@@ -512,46 +589,64 @@ with tab_simple:
             report_data['occupancy'] = occ_s
             report_data['week_limit'] = week_limit_s
         st.session_state['s_report_data'] = report_data
-        
-        # --- 下载报告按钮 (始终显示，但数据就绪时才可用) ---
-        if st.session_state.get('s_report_data') is not None:
-            html_content = generate_simple_report(st.session_state['s_report_data'])
-            st.download_button(
-                label="📥 下载报告 (HTML)",
-                data=html_content.encode('utf-8'),
-                file_name=f"屏蔽计算报告_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                mime="text/html",
-                key="s_download"
-            )
-        else:
-            st.info("请先点击“计算并绘图”生成结果，然后下载报告。")
-        
-        # 材料比较
+    
+    # ---- 下载报告（始终显示，基于 session_state） ----
+    if st.session_state.get('s_report_data') is not None:
+        html_content = generate_simple_report(st.session_state['s_report_data'])
+        st.download_button(
+            label="📥 下载报告 (HTML)",
+            data=html_content.encode('utf-8'),
+            file_name=f"屏蔽计算报告_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+            mime="text/html",
+            key="s_download"
+        )
+    else:
+        st.info("请先点击“计算并绘图”生成结果，然后下载报告。")
+    
+    # ---- 材料比较（独立按钮，始终可见） ----
+    if st.session_state.get('s_last_result') is not None:
         if st.button("材料比较", key="s_compare"):
-            thicks = []
+            last = st.session_state['s_last_result']
+            nuclide = last['nuclide']
+            A_cur = last['activity']
+            dist = last['distance']
+            abs_factor = last['abs_factor']
+            mode = last['mode']
+            data = NUCLIDE_DATA[nuclide]
+            gamma_const = data["gamma_const"]
+            tvl_dict = data["tvl"]
             materials = list(tvl_dict.keys())
+            thicks = []
             for mat_c in materials:
                 try:
-                    if mode_s == "Instantaneous Dose Rate":
-                        th = calc_thickness_instant(A_cur, dist, mat_c, dose_limit_s, abs_factor,
-                                                    use_ct=use_ct_s, ct_dose_rate=ct_dose_s if use_ct_s else 0.0,
+                    if mode == "Instantaneous Dose Rate":
+                        th = calc_thickness_instant(A_cur, dist, mat_c, last['dose_limit'], abs_factor,
+                                                    use_ct=last['ct_used'], ct_dose_rate=last['ct_dose'],
                                                     gamma_const=gamma_const, tvl_dict=tvl_dict)
                     else:
-                        th = calc_thickness_weekly(A_cur, dist, mat_c, workload_s, occ_s, week_limit_s,
-                                                   abs_factor, gamma_const=gamma_const, tvl_dict=tvl_dict)
+                        th = calc_thickness_weekly(A_cur, dist, mat_c, last['workload'], last['occupancy'],
+                                                   last['week_limit'], abs_factor,
+                                                   gamma_const=gamma_const, tvl_dict=tvl_dict)
                     thicks.append(th)
                 except:
                     thicks.append(0.0)
-            fig2, ax2 = plt.subplots(figsize=(6, 4))
-            bars = ax2.bar(materials, thicks, color=['gray', 'orange', 'green'])
+            fig2, ax2 = plt.subplots(figsize=(6, 5))  # 稍微增加高度
+            colors = plt.cm.tab10.colors[:len(materials)]
+            bars = ax2.bar(materials, thicks, color=colors)
             ax2.set_ylabel("厚度 (mm)")
-            ax2.set_title(f"材料比较 ({nuclide_s})")
+            ax2.set_title(f"材料比较 ({nuclide})")
+            # 让横坐标标签倾斜 20 度，并右对齐
+            ax2.set_xticklabels(materials, rotation=20, ha='right')
+            # 调整底部边距，给标签留出空间
+            fig2.subplots_adjust(bottom=0.25)
             for bar, val in zip(bars, thicks):
                 ax2.text(bar.get_x() + bar.get_width()/2, val + 0.5, f"{val:.1f}", ha='center')
-            st.pyplot(fig2)
-        
-        with st.expander("公式说明"):
-            st.text("〖瞬时剂量率〗\nd = TVL × log10( D_unshielded / D_target )\nD_unshielded = ( A × Γ × f ) / r²\n\n〖周剂量〗\nd = TVL × log10( D_week_unsh / D_week_limit )\nD_week_unsh = Γ × f × (MBq·h) / r² × occ")
+            st.pyplot(fig2)                     
+    else:
+        st.info("请先点击“计算并绘图”生成结果，然后进行材料比较。")
+    
+    with st.expander("公式说明"):
+        st.text("〖瞬时剂量率〗\nd = TVL × log10( D_unshielded / D_target )\nD_unshielded = ( A × Γ × f ) / r²\n\n〖周剂量〗\nd = TVL × log10( D_week_unsh / D_week_limit )\nD_week_unsh = Γ × f × (MBq·h) / r² × occ")
 
 # ============================================================
 # 8. Room Layout Mode
@@ -636,7 +731,7 @@ with tab_room:
         
         calc_btn_r = st.button("计算房间", key="r_calc")
     
-    if calc_btn_r or 'r_calc_done' not in st.session_state:
+    if calc_btn_r:
         st.session_state['r_calc_done'] = True
         try:
             if decay_enabled_r:
@@ -831,7 +926,7 @@ with tab_room:
         fig_room.tight_layout()
         st.pyplot(fig_room)
         
-        # --- 保存报告数据到 session_state ---
+        # 保存报告数据
         st.session_state['r_report_data'] = {
             'nuclide': nuclide_r,
             'room': (L, W, H),
@@ -851,16 +946,16 @@ with tab_room:
             ],
             'window': (win_side, win_pos, win_w),
         }
-        
-        # --- 下载报告按钮 ---
-        if st.session_state.get('r_report_data') is not None:
-            html_content = generate_room_report(st.session_state['r_report_data'])
-            st.download_button(
-                label="📥 下载报告 (HTML)",
-                data=html_content.encode('utf-8'),
-                file_name=f"房间屏蔽报告_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                mime="text/html",
-                key="r_download"
-            )
-        else:
-            st.info("请先点击“计算房间”生成结果，然后下载报告。")
+    
+    # ---- 下载报告（房间） ----
+    if st.session_state.get('r_report_data') is not None:
+        html_content = generate_room_report(st.session_state['r_report_data'])
+        st.download_button(
+            label="📥 下载报告 (HTML)",
+            data=html_content.encode('utf-8'),
+            file_name=f"房间屏蔽报告_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+            mime="text/html",
+            key="r_download"
+        )
+    else:
+        st.info("请先点击“计算房间”生成结果，然后下载报告。")
